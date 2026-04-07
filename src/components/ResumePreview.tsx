@@ -1,7 +1,8 @@
+import { forwardRef } from 'react';
 import { useResume, templateStyles } from '../store/ResumeContext';
 import type { ModuleType } from '../types/resume';
 
-export function ResumePreview() {
+export const ResumePreview = forwardRef<HTMLDivElement>((_, ref) => {
   const { state } = useResume();
   const { resumeData, currentTemplate, activeModules, moduleOrder, sectionTitles } = state;
   const { basicInfo, education, coreSkills, workExperience, internshipExperience, projectExperience, customModules } = resumeData;
@@ -143,7 +144,7 @@ export function ResumePreview() {
   };
 
   return (
-    <div className="resume-container" id="resume-preview">
+    <div className="resume-container" id="resume-preview" ref={ref}>
       {/* 顶部彩色装饰条 */}
       {currentTemplate === 'gray' && <div style={{ height: 6, background: '#666', margin: '-20mm -20mm 0 -20mm' }} />}
       {currentTemplate === 'purple' && <div style={{ height: 6, background: '#7c3aed', margin: '-20mm -20mm 0 -20mm' }} />}
@@ -178,4 +179,4 @@ export function ResumePreview() {
       {moduleOrder.map((module) => renderModule(module))}
     </div>
   );
-}
+});

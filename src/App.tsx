@@ -14,6 +14,8 @@ import { TemplateSelector } from './components/TemplateSelector';
 import { ResumePreview } from './components/ResumePreview';
 import { SortModal } from './components/SortModal';
 import type { ResumeData } from './types/resume';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import './App.css';
 
 // 示例数据
@@ -91,6 +93,7 @@ function AppContent() {
   const [showSampleConfirm, setShowSampleConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resumeRef = useRef<HTMLDivElement>(null);
 
   // 导出 JSON
   const exportJSON = () => {
@@ -121,21 +124,58 @@ function AppContent() {
     }
   };
 
-  // 导出 PDF（通过 API）
+  // 导出 PDF（前端直接生成）
   const exportPDF = async () => {
+    if (!resumeRef.current) return;
+
     setLoading(true);
     try {
-      const response = await fetch('/api/hello', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state.resumeData),
+      const element = resumeRef.current;
+
+      // 使用 html2canvas 将 DOM 转换为图片
+      const canvas = await html2canvas(element, {
+        scale: 2, // 提高清晰度
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
       });
-      const data = await response.json();
-      console.log('PDF 导出请求已发送', data);
-      alert('PDF 导出功能正在开发中，请稍候');
+
+      // 计算 PDF 尺寸（A4 纸：210mm x 297mm）
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // 创建 PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      // 如果内容超过一页，自动分页
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const imgData = canvas.toDataURL('image/png');
+
+      // 添加第一页
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // 如果内容超过一页，添加后续页面
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // 获取姓名作为文件名
+      const fileName = state.resumeData.basicInfo.name || '简历';
+      pdf.save(`${fileName}.pdf`);
     } catch (error) {
-      console.error('导出失败', error);
-      alert('导出失败，请重试');
+      console.error('PDF 导出失败', error);
+      alert('PDF 导出失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -269,7 +309,7 @@ function AppContent() {
         {/* 右侧预览区 */}
         <div className="preview-panel">
           <div className="preview-hint">简历预览区（可导出PDF）</div>
-          <ResumePreview />
+          <ResumePreview ref={resumeRef} />
         </div>
       </div>
 
